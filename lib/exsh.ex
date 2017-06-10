@@ -3,16 +3,25 @@ defmodule Exsh do
   Documentation for Exsh.
   """
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> Exsh.hello
-      :world
-
-  """
-  def hello do
-    :world
+  def main(args) do
+    read()
   end
+
+  def read() do
+    IO.gets("> ")
+    |> String.trim
+    |> eval
+  end
+
+  def eval("exit") do end
+  def eval(command) do
+    print(command)
+    read()
+  end
+
+  def print("") do end
+  def print(output) do
+    IO.puts " (#{output})"
+  end
+
 end

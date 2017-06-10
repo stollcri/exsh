@@ -3,10 +3,14 @@ defmodule Exsh.Mixfile do
 
   def project do
     [app: :exsh,
+     name: "exsh",
+     source_url: "https://github.com/stollcri/exsh",
+     description: "A command language interpreter that executes commands read from the standard input or from a file",
      version: "0.1.0",
      elixir: "~> 1.4",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
+     escript: [main_module: Exsh],
      deps: deps()]
   end
 
