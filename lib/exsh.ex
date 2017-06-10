@@ -15,16 +15,13 @@ defmodule Exsh do
 
   def eval("exit") do end
   def eval(command_string) do
-    # print(command_string)
     tokenize(command_string)
     |> pall
     read()
   end
 
   def pall(tokens) do
-    IO.puts ">>>"
     for x <- tokens, do: IO.puts " #{x}"
-    IO.puts "<<<"
   end
 
   def print() do end
@@ -33,25 +30,47 @@ defmodule Exsh do
     IO.puts " (#{output})"
   end
 
+  @doc """
+  Creates tokens from the `raw_string`
+
+  Returns `[tokens]`
+
+  ## Examples
+
+    iex> Exsh.tokenize("pwd")
+    ["pwd"]
+    iex> Exsh.tokenize("pwd /tmp")
+    ["pwd", "/tmp"]
+
+  """
   def tokenize(raw_string) do
-    # BEGIN
     tokenize(raw_string, "", [])
   end
-  def tokenize("", token_string, tokens) do
-    # BASE CASE
+  defp tokenize("", token_string, tokens) do
     {new_tokens, _} = make_token(token_string, " ")
     tokens ++ new_tokens
   end
-  def tokenize(raw_string, token_string, tokens) do
+  defp tokenize(raw_string, token_string, tokens) do
     character = String.slice(raw_string, 0..0)
     remainder = String.slice(raw_string, 1..-1)
-    
     {new_tokens, token_string} = make_token(token_string, character)
     tokens = tokens ++ new_tokens
-
     tokenize(remainder, token_string, tokens)
   end
 
+  @doc """
+  Creates a token from the `token_string` if the `character` is a delimiter
+
+  Returns `{[token], "token_string"}`
+
+  ## Examples
+
+    iex> Exsh.make_token("pw", "d")
+    {[], "pwd"}
+    iex> Exsh.make_token("pwd", " ")
+    {["pwd"], ""}
+
+  """
   def make_token(token_string, character) do
     case character do
       " " -> {[token_string], ""}
