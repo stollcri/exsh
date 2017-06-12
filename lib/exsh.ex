@@ -42,7 +42,7 @@ defmodule Exsh do
     iex> Exsh.tokenize("pwd /tmp")
     ["pwd", "/tmp"]
     iex> Exsh.tokenize("pwd '/tmp /temp'")
-    ["pwd", "/tmp /temp"]
+    ["pwd", :field_delimiter_begin, "/tmp", "/temp", :field_delimiter_end]
 
   """
   def tokenize(raw_string) do
@@ -84,17 +84,17 @@ defmodule Exsh do
   ## Examples
 
     iex> Exsh.make_token("pwd", "'", [])
-    {["pwd"], "", ["'"]}
+    {["pwd", :field_delimiter_begin], "", ["'"]}
     iex> Exsh.make_token("", "'", [])
-    {[], "", ["'"]}
+    {[:field_delimiter_begin], "", ["'"]}
     iex> Exsh.make_token("pwd a", "'", ["'"])
-    {["pwd a"], "", []}
+    {["pwd a", :field_delimiter_end], "", []}
     iex> Exsh.make_token("", "'", ["'"])
-    {[], "", []}
+    {[:field_delimiter_end], "", []}
     iex> Exsh.make_token("pwd", " ", [])
     {["pwd"], "", []}
     iex> Exsh.make_token("pwd", " ", ["'"])
-    {[], "pwd ", ["'"]}
+    {["pwd"], "", ["'"]}
     iex> Exsh.make_token("pw", "d", [])
     {[], "pwd", []}
 
@@ -103,14 +103,25 @@ defmodule Exsh do
     {character_category, field_delimiter_list} = categorize_character(character, field_delimiter_list)
 
     case character_category do
-      :field_delimiter_begin when token_string != "" -> {[token_string], "", field_delimiter_list}
-      :field_delimiter_begin -> {[], "", field_delimiter_list}
-      :field_delimiter_end when token_string != "" -> {[token_string], "", field_delimiter_list}
-      :field_delimiter_end -> {[], "", field_delimiter_list}
-      :word_delimiter when field_delimiter_list == [] -> {[token_string], "", field_delimiter_list}
-      :word_delimiter -> {[], "#{token_string}#{character}", field_delimiter_list}
+      :field_delimiter_begin when token_string != "" -> {[token_string, :field_delimiter_begin], "", field_delimiter_list}
+      :field_delimiter_begin -> {[:field_delimiter_begin], "", field_delimiter_list}
+      :field_delimiter_end when token_string != "" -> {[token_string, :field_delimiter_end], "", field_delimiter_list}
+      :field_delimiter_end -> {[:field_delimiter_end], "", field_delimiter_list}
+      :field_delimiter when token_string != "" -> {[token_string, character], "", field_delimiter_list}
+      :field_delimiter -> {[character], "", field_delimiter_list}
+      :word_delimiter when token_string != "" -> {[token_string], "", field_delimiter_list}
+      :word_delimiter -> {[], "", field_delimiter_list}
       _ -> {[], "#{token_string}#{character}", field_delimiter_list}
     end
+    # case character_category do
+    #   :field_delimiter_begin when token_string != "" -> {[token_string], "", field_delimiter_list}
+    #   :field_delimiter_begin -> {[], "", field_delimiter_list}
+    #   :field_delimiter_end when token_string != "" -> {[token_string], "", field_delimiter_list}
+    #   :field_delimiter_end -> {[], "", field_delimiter_list}
+    #   :word_delimiter when field_delimiter_list == [] -> {[token_string], "", field_delimiter_list}
+    #   :word_delimiter -> {[], "#{token_string}#{character}", field_delimiter_list}
+    #   _ -> {[], "#{token_string}#{character}", field_delimiter_list}
+    # end
   end
 
   @doc """
@@ -135,9 +146,9 @@ defmodule Exsh do
     field_delimiter_list_head = Enum.slice(field_delimiter_list, 0..0)
     field_delimiter_list_tail = Enum.slice(field_delimiter_list, 1..-1)
     case character_category do
-      :field_delimiter when [character] == field_delimiter_list_head ->
+      :field_delimiter_paired when [character] == field_delimiter_list_head ->
         {:field_delimiter_end, field_delimiter_list_tail}
-      :field_delimiter ->
+      :field_delimiter_paired ->
         {:field_delimiter_begin, [character] ++ field_delimiter_list}
       _ -> {character_category, field_delimiter_list}
     end
@@ -151,8 +162,10 @@ defmodule Exsh do
 
     iex> Exsh.categorize_character(" ")
     :word_delimiter
-    iex> Exsh.categorize_character("'")
+    iex> Exsh.categorize_character("|")
     :field_delimiter
+    iex> Exsh.categorize_character("'")
+    :field_delimiter_paired
     iex> Exsh.categorize_character("(")
     :field_delimiter_begin
     iex> Exsh.categorize_character(")")
@@ -168,7 +181,8 @@ defmodule Exsh do
   def categorize_character(character) do
     case character do
       " " -> :word_delimiter
-      "'" -> :field_delimiter
+      "|" -> :field_delimiter
+      "'" -> :field_delimiter_paired
       "(" -> :field_delimiter_begin
       ")" -> :field_delimiter_end
       ";" -> :line_delimiter
