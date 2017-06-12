@@ -3,7 +3,7 @@ defmodule Exsh do
   Documentation for Exsh.
   """
 
-  def main(args) do
+  def main(_) do
     read()
   end
 
@@ -41,10 +41,15 @@ defmodule Exsh do
     ["pwd"]
     iex> Exsh.tokenize("pwd /tmp")
     ["pwd", "/tmp"]
+    iex> Exsh.tokenize("pwd '/tmp /temp'")
+    ["pwd", "/tmp /temp"]
 
   """
   def tokenize(raw_string) do
     tokenize(raw_string, "", [], [])
+  end
+  defp tokenize("", "", tokens, _) do
+    tokens
   end
   defp tokenize("", token_string, tokens, field_delimiters) do
     {new_tokens, _, _} = make_token(token_string, " ", field_delimiters)
@@ -84,13 +89,15 @@ defmodule Exsh do
     {[], "", ["'"]}
     iex> Exsh.make_token("pwd a", "'", ["'"])
     {["pwd a"], "", []}
+    iex> Exsh.make_token("", "'", ["'"])
+    {[], "", []}
     iex> Exsh.make_token("pwd", " ", [])
     {["pwd"], "", []}
     iex> Exsh.make_token("pwd", " ", ["'"])
     {[], "pwd ", ["'"]}
     iex> Exsh.make_token("pw", "d", [])
     {[], "pwd", []}
-    
+
   """
   def make_token(token_string, character, field_delimiter_list) do
     {character_category, field_delimiter_list} = categorize_character(character, field_delimiter_list)
@@ -98,7 +105,8 @@ defmodule Exsh do
     case character_category do
       :field_delimiter_begin when token_string != "" -> {[token_string], "", field_delimiter_list}
       :field_delimiter_begin -> {[], "", field_delimiter_list}
-      :field_delimiter_end -> {[token_string], "", field_delimiter_list}
+      :field_delimiter_end when token_string != "" -> {[token_string], "", field_delimiter_list}
+      :field_delimiter_end -> {[], "", field_delimiter_list}
       :word_delimiter when field_delimiter_list == [] -> {[token_string], "", field_delimiter_list}
       :word_delimiter -> {[], "#{token_string}#{character}", field_delimiter_list}
       _ -> {[], "#{token_string}#{character}", field_delimiter_list}
@@ -124,18 +132,13 @@ defmodule Exsh do
   """
   def categorize_character(character, field_delimiter_list) do
     character_category = categorize_character(character)
-
-    field_delimiter_list_head = []
-    field_delimiter_list_tail = []
-    if field_delimiter_list != [] do
-      [field_delimiter_list_head | field_delimiter_list_tail] = field_delimiter_list
-    end
-    
+    field_delimiter_list_head = Enum.slice(field_delimiter_list, 0..0)
+    field_delimiter_list_tail = Enum.slice(field_delimiter_list, 1..-1)
     case character_category do
-      :field_delimiter when character == field_delimiter_list_head ->
+      :field_delimiter when [character] == field_delimiter_list_head ->
         {:field_delimiter_end, field_delimiter_list_tail}
       :field_delimiter ->
-        {:field_delimiter_begin, [character | field_delimiter_list]}
+        {:field_delimiter_begin, [character] ++ field_delimiter_list}
       _ -> {character_category, field_delimiter_list}
     end
   end
