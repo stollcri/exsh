@@ -78,17 +78,19 @@ defmodule Exsh do
   
   ## Examples
 
-    iex> Exsh.make_token("pw", "d", [])
-    {[], "pwd", []}
-    iex> Exsh.make_token("pwd", " ", [])
-    {["pwd"], "", []}
+    iex> Exsh.make_token("pwd", "'", [])
+    {["pwd"], "", ["'"]}
     iex> Exsh.make_token("", "'", [])
     {[], "", ["'"]}
-    iex> Exsh.make_token("pwd", " ", ["'"])
-    {[], "pwd ", ["'"]}
     iex> Exsh.make_token("pwd a", "'", ["'"])
     {["pwd a"], "", []}
-
+    iex> Exsh.make_token("pwd", " ", [])
+    {["pwd"], "", []}
+    iex> Exsh.make_token("pwd", " ", ["'"])
+    {[], "pwd ", ["'"]}
+    iex> Exsh.make_token("pw", "d", [])
+    {[], "pwd", []}
+    
   """
   def make_token(token_string, character, field_delimiter_list) do
     {character_category, field_delimiter_list} = categorize_character(character, field_delimiter_list)
