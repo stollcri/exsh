@@ -4,32 +4,33 @@ defmodule Exsh do
   """
 
   def main(_) do
+    repl()
+    # read()
+  end
+
+  def repl() do
     read()
+    |> eval
+    # |> print
+    # repl()
   end
 
   def read() do
     IO.gets("> ")
     |> String.trim
-    |> eval
   end
 
   def eval("exit") do end
   def eval(command_string) do
     tokenize(command_string)
     |> treeify
-    # |> pall
-    # read()
-  end
-
-  def pall(tokens) do
-    for x <- tokens, do: IO.puts " #{x}"
-    tokens
   end
 
   def print() do end
   def print("") do end
   def print(output) do
-    IO.puts " (#{output})"
+    # IO.puts " (#{output})"
+    for x <- output, do: IO.puts " #{x}"
   end
 
   def treeify(tokens) do
@@ -45,11 +46,8 @@ defmodule Exsh do
   end
   def treeify_indent(token, indent) do
     case token do
-      :word_delimiter -> indent
-      :field_delimiter -> indent
       :field_delimiter_begin -> indent + 1
       :field_delimiter_end -> indent - 1
-      :line_delimiter -> indent
       _ -> indent
     end
   end
