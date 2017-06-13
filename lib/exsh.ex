@@ -16,18 +16,42 @@ defmodule Exsh do
   def eval("exit") do end
   def eval(command_string) do
     tokenize(command_string)
-    |> pall
-    read()
+    |> treeify
+    # |> pall
+    # read()
   end
 
   def pall(tokens) do
     for x <- tokens, do: IO.puts " #{x}"
+    tokens
   end
 
   def print() do end
   def print("") do end
   def print(output) do
     IO.puts " (#{output})"
+  end
+
+  def treeify(tokens) do
+    treeify(tokens, 0)
+  end
+  def treeify([], _) do end
+  def treeify(tokens, indent) do
+    [tokens_head | tokens_tail] = tokens
+    new_indent = treeify_indent(tokens_head, indent)
+    indention = String.duplicate("  ", new_indent)
+    IO.puts "#{indention}#{tokens_head}"
+    treeify(tokens_tail, new_indent)
+  end
+  def treeify_indent(token, indent) do
+    case token do
+      :word_delimiter -> indent
+      :field_delimiter -> indent
+      :field_delimiter_begin -> indent + 1
+      :field_delimiter_end -> indent - 1
+      :line_delimiter -> indent
+      _ -> indent
+    end
   end
 
   @doc """
