@@ -180,35 +180,46 @@ defmodule Exsh do
   end
 
 
+  # "a 'bb (ccc d) e' | f|g(h'i'j k)"
+  # ["a", ["bb", ["ccc", "d"], "e"], "|", "f", "|", "g", ["h", ["i"], "j", "k"]]
+
   def evaluate(raw_tokens) do
     [raw_tokens_head | raw_tokens_tail] = raw_tokens
-    evaluate(raw_tokens_head, [], [], raw_tokens_tail)
+    evaluate(raw_tokens_head, [], raw_tokens_tail)
   end
-  def evaluate(_, pending_tokens, merged_tokens, []) do
-    merge_tokens(merged_tokens, pending_tokens, [])
+  def evaluate(current_token, pending_tokens, []) do
+    # IO.puts "W: #{current_token}"
+    # pending_tokens
+    evaluate_next(current_token, pending_tokens)
   end
-  def evaluate(current_token, pending_tokens, merged_tokens, unmerged_tokens) do
-    {pending_tokens, newly_merged_tokens, delimiter_token} = evaluate_next(current_token, pending_tokens)
+  def evaluate(current_token, pending_tokens, unmerged_tokens) do
+    pending_tokens = evaluate_next(current_token, pending_tokens)
     [unmerged_tokens_head | unmerged_tokens_tail] = unmerged_tokens
-    evaluate(unmerged_tokens_head, pending_tokens, merge_tokens(merged_tokens, newly_merged_tokens, delimiter_token), unmerged_tokens_tail)
+    evaluate(unmerged_tokens_head, pending_tokens, unmerged_tokens_tail)
   end
-  def evaluate_next(current_token, pending_tokens) do
-    pending_token_string = Enum.join(pending_tokens, " ")
-    IO.puts "X: #{current_token} (#{pending_token_string})"
+  def evaluate_next(current_token, stack) do
     case current_token do
-      :field_delimiter_begin -> {pending_tokens, [], []}
-      :field_delimiter_end -> {pending_tokens, [], []}
-      :line_delimiter -> {pending_tokens, [], []}
-      "|" -> {[], pending_tokens, [current_token]}
-      _ -> {pending_tokens ++ [current_token], [], []}
+      :field_delimiter_end -> group_tokens(stack)
+      _ -> stack ++ [current_token]
     end
   end
 
-  def merge_tokens(existing, new, delimiter) do
-    case new do
-      [] -> existing
-      _ when delimiter != [] -> existing ++ [new] ++ [delimiter]
-      _ -> existing ++ [new]
+  def group_tokens(stack) do
+    group_tokens(stack, [])
+  end
+  def group_tokens([], poped) do
+    poped
+  end
+  def group_tokens(stack, poped) do
+    {stack, poped} = find_delimiter(stack, poped)
+    group_tokens(stack, poped)
+  end
+  def find_delimiter(stack, poped) do
+    stack_last = Enum.slice(stack, -1..-1)
+    stack_fore = Enum.slice(stack, 0..-2)
+    case stack_last do
+      [:field_delimiter_begin] -> {[], stack_fore ++ [poped]}
+      _ -> {stack_fore, stack_last ++ poped}
     end
   end
 
