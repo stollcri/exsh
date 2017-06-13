@@ -63,21 +63,8 @@ defmodule Exsh do
     tokenize(remainder, token_string, tokens, field_delimiters)
   end
 
-  # iex> use Bitwise
-  # Bitwise
-  # iex> mask = 0b0010
-  # 2
-  # iex> opt1 = 0b0001
-  # 1
-  # iex> opt1 &&& mask
-  # 0
-  # iex> opt2 = 0b0011
-  # 3
-  # iex> opt2 &&& mask
-  # 2
-
   @doc """
-  Creates a token from the `token_string` if the `character` is a delimiter
+  Creates a token from the `token_string` if the `character` is a delimiter, considering the `field_delimiter_list`
   
   Returns `{[token], "token_string", [field_delimiter_list]}`
   
@@ -101,7 +88,6 @@ defmodule Exsh do
   """
   def make_token(token_string, character, field_delimiter_list) do
     {character_category, field_delimiter_list} = categorize_character(character, field_delimiter_list)
-
     case character_category do
       :field_delimiter_begin when token_string != "" -> {[token_string, :field_delimiter_begin], "", field_delimiter_list}
       :field_delimiter_begin -> {[:field_delimiter_begin], "", field_delimiter_list}
@@ -113,21 +99,12 @@ defmodule Exsh do
       :word_delimiter -> {[], "", field_delimiter_list}
       _ -> {[], "#{token_string}#{character}", field_delimiter_list}
     end
-    # case character_category do
-    #   :field_delimiter_begin when token_string != "" -> {[token_string], "", field_delimiter_list}
-    #   :field_delimiter_begin -> {[], "", field_delimiter_list}
-    #   :field_delimiter_end when token_string != "" -> {[token_string], "", field_delimiter_list}
-    #   :field_delimiter_end -> {[], "", field_delimiter_list}
-    #   :word_delimiter when field_delimiter_list == [] -> {[token_string], "", field_delimiter_list}
-    #   :word_delimiter -> {[], "#{token_string}#{character}", field_delimiter_list}
-    #   _ -> {[], "#{token_string}#{character}", field_delimiter_list}
-    # end
   end
 
   @doc """
   Categorize a `character` considering the `field_delimiter_list`
   
-  Returns character_category atom
+  Returns {character_category_atom, field_delimiter_list}
 
   ## Examples
 
