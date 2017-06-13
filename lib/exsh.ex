@@ -24,83 +24,15 @@ defmodule Exsh do
   def eval("exit") do end
   def eval(command_string) do
     tokenize(command_string)
-    # |> treeify
-    |> nary_tree
   end
 
   def print() do end
   def print("") do end
   def print(output) do
     # IO.puts " (#{output})"
-    # for x <- output, do: IO.puts " #{x}"
+    for x <- output, do: IO.puts " #{x}"
     # IO.inspect output
-    Enum.take(output)
-  end
-
-  def treeify(tokens) do
-    treeify(tokens, 0)
-  end
-  def treeify([], _) do end
-  def treeify(tokens, indent) do
-    [tokens_head | tokens_tail] = tokens
-    new_indent = treeify_indent(tokens_head, indent)
-    indention = String.duplicate("  ", new_indent)
-    IO.puts "#{indention}#{tokens_head}"
-    treeify(tokens_tail, new_indent)
-  end
-  def treeify_indent(token, indent) do
-    case token do
-      :field_delimiter_begin -> indent + 1
-      :field_delimiter_end -> indent - 1
-      _ -> indent
-    end
-  end
-
-  def nary_tree(tokens) do
-    token_string = Enum.join(tokens, ", ")
-    IO.puts "A: nary_tree(tokens) -- #{token_string}"
-    IO.puts ""
-
-    nary_tree(tokens ++ [:end_of_input], [], [])
-  end
-  def nary_tree([], [], tree_list) do
-    token_string = Enum.join(tree_list, ", ")
-    IO.puts "B: nary_tree([], tree_list) -- #{token_string}"
-    IO.puts ""
-
-    tree_list
-  end
-  # [a, :field_delimiter_begin, bb, :field_delimiter_begin, ccc, :field_delimiter_end, :field_delimiter_end]
-  def nary_tree(tokens, branch, tree) do
-    token_string = Enum.join(tokens, ", ")
-    branch_string = Enum.join(branch, ", ")
-    tree_string = Enum.join(tree, ", ")
-    # "a 'bb (ccc d) e' | f|g(h'i'j k)"
-    IO.puts "C: nary_tree(tokens, branch, tree) -- #{token_string}"
-    IO.puts "                                           -- #{branch_string}"
-    IO.puts "                                           -- #{tree_string}"
-    IO.puts ""
-
-    [tokens_head | tokens_tail] = tokens
-    {branch, tree} = nary_tree_node(tokens_head, branch, tree)
-
-    nary_tree(tokens_tail, branch, tree)
-  end
-
-  def nary_tree_node(value, branch, tree) do
-    branch_string = Enum.join(branch, ", ")
-    tree_string = Enum.join(tree, ", ")
-    IO.puts "D: nary_tree_node(value, branch, tree) -- #{value}"
-    IO.puts "                                       -- #{branch_string}"
-    IO.puts "                                       -- #{tree_string}"
-    IO.puts ""
-
-    case value do
-      :field_delimiter_begin -> {[], tree ++ branch}
-      :field_delimiter_end -> {[], tree ++ branch}
-      :end_of_input -> {[], tree}
-      _ -> {tree ++ [value], tree}
-    end
+    # Enum.take(output)
   end
 
   @doc """
