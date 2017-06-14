@@ -24,7 +24,9 @@ defmodule Exsh do
 
   def eval("exit") do end
   def eval(command_string) do
-    lex(command_string)
+    command_string
+    |> tokenize
+    |> parse
   end
 
   def print() do end
@@ -36,87 +38,96 @@ defmodule Exsh do
     Enum.take(output)
   end
 
-  def lex(command_string) do
-    command_string
-    |> scan
-    |> evaluate
-  end
-
   @doc """
-  Creates tokens from the `raw_string`
+  Create tokens from a `raw_string`
 
   Returns `[tokens]`
 
   ## Examples
 
-    iex> Exsh.scan("pwd")
+    iex> Exsh.tokenize("pwd")
     ["pwd"]
-    iex> Exsh.scan("pwd /tmp")
+    iex> Exsh.tokenize("pwd /tmp")
     ["pwd", "/tmp"]
-    iex> Exsh.scan("pwd '/tmp /temp'")
+    iex> Exsh.tokenize("pwd '/tmp /temp'")
     ["pwd", :field_delimiter_begin, "/tmp", "/temp", :field_delimiter_end]
 
   """
-  def scan(raw_string) do
+  def tokenize(raw_string) do
     scan(raw_string, "", [], [])
-  end
-  defp scan("", "", tokens, _) do
-    tokens
-  end
-  defp scan("", token_string, tokens, field_delimiters) do
-    {new_tokens, _, _} = make_token(token_string, " ", field_delimiters)
-    tokens ++ new_tokens
-  end
-  defp scan(raw_string, token_string, tokens, field_delimiters) do
-    character = String.slice(raw_string, 0..0)
-    remainder = String.slice(raw_string, 1..-1)
-    {new_tokens, token_string, field_delimiters} = make_token(token_string, character, field_delimiters)
-    tokens = tokens ++ new_tokens
-    scan(remainder, token_string, tokens, field_delimiters)
   end
 
   @doc """
-  Creates a token from the `token_string` if the `character` is a delimiter, considering the `delimiter_list`
+  Scan a `raw_string` and call the lexer
+
+  Returns `[tokens]`
+
+  ## Examples
+
+    iex> Exsh.scan("pwd", "", [], [])
+    ["pwd"]
+    iex> Exsh.scan("d", "pw", [], [])
+    ["pwd"]
+    iex> Exsh.scan("(", "", ["pwd"], [])
+    ["pwd", :field_delimiter_begin]
+    iex> Exsh.scan("'", "", [:field_delimiter_begin, "pwd"], ["'"])
+    [:field_delimiter_begin, "pwd", :field_delimiter_end]
+
+  """
+  def scan("", lexeme, tokens, delimiters) do
+    {new_tokens, _, _} = lex(lexeme, " ", delimiters)
+    tokens ++ new_tokens
+  end
+  def scan(raw_string, lexeme, tokens, delimiters) do
+    character = String.slice(raw_string, 0..0)
+    remainder = String.slice(raw_string, 1..-1)
+    {new_tokens, lexeme, delimiters} = lex(lexeme, character, delimiters)
+    tokens = tokens ++ new_tokens
+    scan(remainder, lexeme, tokens, delimiters)
+  end
+
+  @doc """
+  Create tokens from the `lexeme` (when `character` is a delimiter, while considering `delimiters`)
   
-  Returns `{[token], "token_string", [delimiter_list]}`
+  Returns `{[tokens], "lexeme", [delimiters]}`
   
   ## Examples
 
-    iex> Exsh.make_token("pwd", "'", [])
+    iex> Exsh.lex("pwd", "'", [])
     {["pwd", :field_delimiter_begin], "", ["'"]}
-    iex> Exsh.make_token("", "'", [])
+    iex> Exsh.lex("", "'", [])
     {[:field_delimiter_begin], "", ["'"]}
-    iex> Exsh.make_token("pwd a", "'", ["'"])
+    iex> Exsh.lex("pwd a", "'", ["'"])
     {["pwd a", :field_delimiter_end], "", []}
-    iex> Exsh.make_token("", "'", ["'"])
+    iex> Exsh.lex("", "'", ["'"])
     {[:field_delimiter_end], "", []}
-    iex> Exsh.make_token("pwd", " ", [])
+    iex> Exsh.lex("pwd", " ", [])
     {["pwd"], "", []}
-    iex> Exsh.make_token("pwd", " ", ["'"])
+    iex> Exsh.lex("pwd", " ", ["'"])
     {["pwd"], "", ["'"]}
-    iex> Exsh.make_token("pw", "d", [])
+    iex> Exsh.lex("pw", "d", [])
     {[], "pwd", []}
 
   """
-  def make_token(token_string, character, delimiter_list) do
-    {character_category, delimiter_list} = categorize_character(character, delimiter_list)
+  def lex(lexeme, character, delimiters) do
+    {character_category, delimiters} = categorize_character(character, delimiters)
     case character_category do
-      :field_delimiter_begin when token_string != "" -> {[token_string, :field_delimiter_begin], "", delimiter_list}
-      :field_delimiter_begin -> {[:field_delimiter_begin], "", delimiter_list}
-      :field_delimiter_end when token_string != "" -> {[token_string, :field_delimiter_end], "", delimiter_list}
-      :field_delimiter_end -> {[:field_delimiter_end], "", delimiter_list}
-      :field_delimiter when token_string != "" -> {[token_string, character], "", delimiter_list}
-      :field_delimiter -> {[character], "", delimiter_list}
-      :word_delimiter when token_string != "" -> {[token_string], "", delimiter_list}
-      :word_delimiter -> {[], "", delimiter_list}
-      _ -> {[], "#{token_string}#{character}", delimiter_list}
+      :field_delimiter_begin when lexeme != "" -> {[lexeme, :field_delimiter_begin], "", delimiters}
+      :field_delimiter_begin -> {[:field_delimiter_begin], "", delimiters}
+      :field_delimiter_end when lexeme != "" -> {[lexeme, :field_delimiter_end], "", delimiters}
+      :field_delimiter_end -> {[:field_delimiter_end], "", delimiters}
+      :field_delimiter when lexeme != "" -> {[lexeme, character], "", delimiters}
+      :field_delimiter -> {[character], "", delimiters}
+      :word_delimiter when lexeme != "" -> {[lexeme], "", delimiters}
+      :word_delimiter -> {[], "", delimiters}
+      _ -> {[], "#{lexeme}#{character}", delimiters}
     end
   end
 
   @doc """
-  Categorize a `character` considering the `delimiter_list`
+  Categorize a `character` while considering `delimiters`
   
-  Returns {character_category_atom, delimiter_list}
+  Returns {character_category_atom, delimiters}
 
   ## Examples
 
@@ -130,16 +141,16 @@ defmodule Exsh do
     {:character, ["'"]}
 
   """
-  def categorize_character(character, delimiter_list) do
+  def categorize_character(character, delimiters) do
     character_category = categorize_character(character)
-    delimiter_list_head = Enum.slice(delimiter_list, 0..0)
-    delimiter_list_tail = Enum.slice(delimiter_list, 1..-1)
+    delimiters_head = Enum.slice(delimiters, 0..0)
+    delimiters_tail = Enum.slice(delimiters, 1..-1)
     case character_category do
-      :field_delimiter_paired when [character] == delimiter_list_head ->
-        {:field_delimiter_end, delimiter_list_tail}
+      :field_delimiter_paired when [character] == delimiters_head ->
+        {:field_delimiter_end, delimiters_tail}
       :field_delimiter_paired ->
-        {:field_delimiter_begin, [character] ++ delimiter_list}
-      _ -> {character_category, delimiter_list}
+        {:field_delimiter_begin, [character] ++ delimiters}
+      _ -> {character_category, delimiters}
     end
   end
   @doc """
@@ -179,31 +190,73 @@ defmodule Exsh do
     end
   end
 
+  @doc """
+  Create parse tree from `raw_tokens`
 
-  # "a 'bb (ccc d) e' | f|g(h'i'j k)"
-  # ["a", ["bb", ["ccc", "d"], "e"], "|", "f", "|", "g", ["h", ["i"], "j", "k"]]
+  Returns `[parse_tree]`
 
-  def evaluate(raw_tokens) do
+  ## Examples
+
+    iex> Exsh.parse(["a", :field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
+    ["a", ["bb"], "ccc"]
+    iex> Exsh.parse("a", [], [:field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
+    ["a", ["bb"], "ccc"]
+    iex> Exsh.parse(["a", :field_delimiter_begin, "bb", :field_delimiter_begin, "ccc", "d", :field_delimiter_end, \
+    "e", :field_delimiter_end, "|", "f", "|", "g", :field_delimiter_begin, "h", :field_delimiter_begin, "i", \
+    :field_delimiter_end, "j", "k", :field_delimiter_end])
+    ["a", ["bb", ["ccc", "d"], "e"], "|", "f", "|", "g", ["h", ["i"], "j", "k"]]
+
+  """
+  def parse(raw_tokens) do
     [raw_tokens_head | raw_tokens_tail] = raw_tokens
-    evaluate(raw_tokens_head, [], raw_tokens_tail)
+    parse(raw_tokens_head, [], raw_tokens_tail)
   end
-  def evaluate(current_token, pending_tokens, []) do
-    # IO.puts "W: #{current_token}"
-    # pending_tokens
-    evaluate_next(current_token, pending_tokens)
+  def parse(current_token, pending_tokens, []) do
+    parse_next(current_token, pending_tokens)
   end
-  def evaluate(current_token, pending_tokens, unmerged_tokens) do
-    pending_tokens = evaluate_next(current_token, pending_tokens)
+  def parse(current_token, pending_tokens, unmerged_tokens) do
+    pending_tokens = parse_next(current_token, pending_tokens)
     [unmerged_tokens_head | unmerged_tokens_tail] = unmerged_tokens
-    evaluate(unmerged_tokens_head, pending_tokens, unmerged_tokens_tail)
+    parse(unmerged_tokens_head, pending_tokens, unmerged_tokens_tail)
   end
-  def evaluate_next(current_token, stack) do
+  @doc """
+  Add the `current_token` to the `stack` or, if `current_token` is an end delimiter,
+  create a group (new list) between here and the last begin delimiter and then add the group to the stack
+
+  Returns `[stack]`
+
+  ## Examples
+
+    iex> Exsh.parse_next(:field_delimiter_end, ["a", :field_delimiter_begin, "b"])
+    ["a", ["b"]]
+    iex> Exsh.parse_next("b", ["a"])
+    ["a", "b"]
+
+  """
+  def parse_next(current_token, stack) do
     case current_token do
       :field_delimiter_end -> group_tokens(stack)
       _ -> stack ++ [current_token]
     end
   end
 
+  @doc """
+  Create a group of tokens from the `stack`
+
+  Pop elements off of the stack until a begin delimiter is found,
+  place those elements into a list,
+  and push the list onto the stack
+
+  Returns `[stack]`
+
+  ## Examples
+
+    iex> Exsh.group_tokens(["a", :field_delimiter_begin, "b"])
+    ["a", ["b"]]
+    iex> Exsh.group_tokens(["a", "b"])
+    ["a", "b"]
+
+  """
   def group_tokens(stack) do
     group_tokens(stack, [])
   end
