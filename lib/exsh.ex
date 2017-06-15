@@ -47,6 +47,7 @@ defmodule Exsh do
 
       Built-in shell commands:
         help          Print this help
+        vars          Print symbol table
         exit          Exit the shell
     """
   end
@@ -62,8 +63,12 @@ defmodule Exsh do
     repl(options, command_string)
   end
   def repl(options, command_string) do
+    symbol_map = %{
+      "ls" => "/bin/ls -AGhl",
+      "dirsizes" => "ls | du -chd 1 | sort"
+    }
     input = read(options, command_string)
-    {stdout, stderr, exitcode} = eval(options, input)
+    {stdout, stderr, exitcode} = eval(options, symbol_map, input)
     if exitcode != -1 do
       print(options, stdout, stderr)
 
@@ -104,33 +109,38 @@ defmodule Exsh do
 
   ## Examples
 
-    iex> Exsh.eval([], "exit")
+    iex> Exsh.eval([], [], "exit")
     {"", "", -1}
 
   """
-  def eval(_, "exit") do
+  def eval(_, _, "exit") do
     {"", "", -1}
   end
-  def eval(options, "help") do
+  def eval(options, symbols, "help") do
     {help_message(options), "", 0}
   end
-  def eval(options, command_string) do
-    symbol_map = %{
-      "ls" => "/bin/ls -AGhl",
-      "dirsizes" => "ls | du -chd 1 | sort"
-    }
-
+  def eval(options, symbols, "vars") do
+    {get_symbols_as_string(symbols), "", 0}
+  end
+  def eval(options, symbols, command_string) do
     stdout = command_string
     |> tokenize
     |> parse
-    |> evaluate(symbol_map)
+    |> evaluate(symbols)
     stderr = ""
     exitcode = 0
     {stdout, stderr, exitcode}
   end
+  def get_symbols_as_string(symbols) do
+    get_symbols(symbols)
+    |> Enum.join("\n")
+  end
+  def get_symbols(symbols) do
+    for {key, val} <- symbols, into: [], do: "#{key} = #{val}"
+  end
 
   @doc """
-  Print command outpu given in the `stdout` and `stderr`
+  Print command output given in the `stdout` and `stderr`
   The `options` are currently ignored
   """
   def print() do end
