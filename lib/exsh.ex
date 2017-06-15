@@ -1,6 +1,8 @@
 defmodule Exsh do
   @moduledoc """
   Documentation for Exsh.
+
+  mix escript.build; ./exsh "aa | 'bb (cc dd) ee'||ff(gg 'hh' ii)jj" --exit
   """
 
   def main(args) do
