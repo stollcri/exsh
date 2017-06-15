@@ -3,27 +3,58 @@ defmodule Exsh do
   Documentation for Exsh.
   """
 
-  def main(_) do
-    repl()
-    # read()
+  def main(args) do
+    args
+    |> parse_args
+    |> repl
   end
 
-  def repl() do
-    # read()
-    IO.puts "a 'bb (ccc d) e' | f|g(h'i'j k)"
-    "a 'bb (ccc d) e' | f|g(h'i'j k)"
-    |> eval
-    |> print
-    # repl()
+  defp parse_args(args) do
+    option_defaults = %{
+      :exit => :false
+    }
+    parsed_args = OptionParser.parse(args,
+      switches: [
+        help: :boolean,
+        exit: :boolean
+      ],
+      aliases: [
+        h: :help,
+        x: :exit
+      ]
+    )
+    case parsed_args do
+      {[help: true], _, _} -> :help
+      {options, command_string, _} -> {Enum.into(options, option_defaults), command_string}
+    end
   end
 
-  def read() do
-    IO.gets("> ")
+  def repl({options, [command_string | _]}) do
+    repl(options, command_string)
+  end
+  def repl(options, command_string) do
+    input = read(options, command_string)
+    results = eval(input, options)
+    if results != :exit do
+      print(results)
+
+      if not options[:exit] do
+        repl(options, "")
+      end
+    end
+  end
+
+  def read(options, command_string) do
+    if command_string == "" do
+      IO.gets("> ")
+    else
+      command_string
+    end
     |> String.trim
   end
 
-  def eval("exit") do end
-  def eval(command_string) do
+  def eval("exit", _) do :exit end
+  def eval(command_string, options) do
     command_string
     |> tokenize
     |> parse
@@ -34,12 +65,6 @@ defmodule Exsh do
   def print("") do end
   def print(output) do
     IO.puts "#{output}"
-    # for x <- output, do: IO.puts " #{x}"
-    # IO.inspect output
-    # Enum.take(output)
-    # 
-    # tmp_string = Enum.join(output, " ")
-    # IO.puts ">> (#{tmp_string})"
   end
 
   @doc """
@@ -294,14 +319,14 @@ defmodule Exsh do
   end
   def build_command(parse_tree, command) do
     [token | remaining_tokens] = parse_tree
-    new_command = expand_command(token, command)
+    new_command = expand_token(token)
     if command == "" do
       build_command(remaining_tokens, new_command)
     else
       build_command(remaining_tokens, "#{command} #{new_command}")
     end
   end
-  def expand_command(token, command) do
+  def expand_token(token) do
     if is_list(token) do
       "(#{build_command(token, "")})"
     else
