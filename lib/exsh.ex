@@ -12,11 +12,13 @@ defmodule Exsh do
   end
 
   defp parse_args(args) do
-    option_defaults = %{
+    options_default = %{
+      :version => "0.0.1",
+      :help => :false,
       :exit => :false
     }
-    parsed_args = OptionParser.parse(args,
-      switches: [
+    {options_input, command_strings, _} = OptionParser.parse(args,
+      strict: [
         help: :boolean,
         exit: :boolean
       ],
@@ -25,27 +27,66 @@ defmodule Exsh do
         x: :exit
       ]
     )
-    case parsed_args do
-      {[help: true], _, _} -> :help
-      {options, command_string, _} -> {Enum.into(options, option_defaults), command_string}
+    options = Enum.into(options_input, options_default)
+    if options[:help] do
+      {Enum.into(%{:exit => :true}, options), ["help"]}
+    else
+      {options, command_strings}
     end
   end
 
+  def help_message(options) do
+    """
+    exsh, version #{options[:version]}
+    https://github.com/stollcri/exsh
+
+    exsh [options] [commands]
+      options:
+        -h, --help    Print this help
+        -x, --exit    Exit after running command
+
+      Built-in shell commands:
+        help          Print this help
+        exit          Exit the shell
+    """
+  end
+
+  @doc """
+  Read, Evaluate, Print, Loop
+  """
+  def repl({options, []}) do
+    repl(options, "")
+  end
   def repl({options, [command_string | _]}) do
+    # TODO: loop over tail of command_string list to process subsequent commands
     repl(options, command_string)
   end
   def repl(options, command_string) do
     input = read(options, command_string)
-    results = eval(input, options)
-    if results != :exit do
-      print(results)
+    {stdout, stderr, exitcode} = eval(options, input)
+    if exitcode != -1 do
+      print(options, stdout, stderr)
 
-      if not options[:exit] do
+      if options[:exit] do
+        System.halt(exitcode)
+      else
         repl(options, "")
       end
     end
   end
 
+  @doc """
+  Read user input -- gather interactively or use `command_string`
+  The `options` are currently ignored
+
+  Returns `command_string`
+
+  ## Examples
+
+    iex> Exsh.read([], " pwd ")
+    "pwd"
+
+  """
   def read(options, command_string) do
     if command_string == "" do
       IO.gets("> ")
@@ -55,19 +96,50 @@ defmodule Exsh do
     |> String.trim
   end
 
-  def eval("exit", _) do :exit end
-  def eval(command_string, options) do
-    command_string
+  @doc """
+  Evaluate user input given in the `command_string`
+  The `options` are currently ignored
+
+  Returns `{stdout, stderr, exitcode}`
+
+  ## Examples
+
+    iex> Exsh.eval([], "exit")
+    {"", "", -1}
+
+  """
+  def eval(_, "exit") do
+    {"", "", -1}
+  end
+  def eval(options, "help") do
+    {help_message(options), "", 0}
+  end
+  def eval(options, command_string) do
+    stdout = command_string
     |> tokenize
     |> parse
     |> evaluate
+    stderr = ""
+    exitcode = 0
+    {stdout, stderr, exitcode}
   end
 
+  @doc """
+  Print command outpu given in the `stdout` and `stderr`
+  The `options` are currently ignored
+  """
   def print() do end
-  def print("") do end
-  def print(output) do
-    IO.puts "#{output}"
+  def print(_, "", "") do end
+  def print(options, stdout, stderr) do
+    if stdout != "" do
+      IO.puts stdout
+    end
+    if stderr != "" do
+      IO.puts :stderr, stderr
+    end
   end
+
+
 
   @doc """
   Create tokens from a `raw_string`
@@ -110,6 +182,7 @@ defmodule Exsh do
     tokens ++ new_tokens
   end
   def scan(raw_string, lexeme, tokens, delimiters) do
+    # TODO: implement look-back to merge subsequent field delimiters (e.g. ["|", "|"] -> ["||"])
     character = String.slice(raw_string, 0..0)
     remainder = String.slice(raw_string, 1..-1)
     {new_tokens, lexeme, delimiters} = lex(lexeme, character, delimiters)
