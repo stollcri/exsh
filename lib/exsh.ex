@@ -27,15 +27,19 @@ defmodule Exsh do
     command_string
     |> tokenize
     |> parse
+    |> evaluate
   end
 
   def print() do end
   def print("") do end
   def print(output) do
-    # IO.puts " (#{output})"
+    IO.puts "#{output}"
     # for x <- output, do: IO.puts " #{x}"
     # IO.inspect output
-    Enum.take(output)
+    # Enum.take(output)
+    # 
+    # tmp_string = Enum.join(output, " ")
+    # IO.puts ">> (#{tmp_string})"
   end
 
   @doc """
@@ -273,6 +277,35 @@ defmodule Exsh do
     case stack_last do
       [:field_delimiter_begin] -> {[], stack_fore ++ [poped]}
       _ -> {stack_fore, stack_last ++ poped}
+    end
+  end
+
+
+
+  def evaluate(parse_tree) do
+    build_command(parse_tree)
+  end
+
+  def build_command(parse_tree) do
+    build_command(parse_tree, "")
+  end
+  def build_command([], command) do
+    command
+  end
+  def build_command(parse_tree, command) do
+    [token | remaining_tokens] = parse_tree
+    new_command = expand_command(token, command)
+    if command == "" do
+      build_command(remaining_tokens, new_command)
+    else
+      build_command(remaining_tokens, "#{command} #{new_command}")
+    end
+  end
+  def expand_command(token, command) do
+    if is_list(token) do
+      "(#{build_command(token, "")})"
+    else
+      token
     end
   end
 
