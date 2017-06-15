@@ -290,6 +290,9 @@ defmodule Exsh do
   def categorize_character(character) do
     case character do
       " " -> :word_delimiter
+      "=" -> :field_delimiter
+      ">" -> :field_delimiter
+      "<" -> :field_delimiter
       "|" -> :field_delimiter
       "'" -> :field_delimiter_paired
       "(" -> :field_delimiter_begin
