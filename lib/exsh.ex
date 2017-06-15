@@ -116,13 +116,14 @@ defmodule Exsh do
   def eval(_, _, "exit") do
     {"", "", -1}
   end
-  def eval(options, symbols, "help") do
-    {help_message(options), "", 0}
-  end
-  def eval(options, symbols, "vars") do
-    {get_symbols_as_string(symbols), "", 0}
-  end
   def eval(options, symbols, command_string) do
+    case command_string do
+      "help" -> {help_message(options), "", 0}
+      "vars" -> {get_symbols_as_string(symbols), "", 0}
+      _ -> eval_command(options, symbols, command_string)
+    end
+  end
+  def eval_command(options, symbols, command_string) do
     stdout = command_string
     |> tokenize
     |> parse
@@ -132,10 +133,10 @@ defmodule Exsh do
     {stdout, stderr, exitcode}
   end
   def get_symbols_as_string(symbols) do
-    get_symbols(symbols)
+    get_symbols_as_list(symbols)
     |> Enum.join("\n")
   end
-  def get_symbols(symbols) do
+  def get_symbols_as_list(symbols) do
     for {key, val} <- symbols, into: [], do: "#{key} = #{val}"
   end
 
@@ -423,6 +424,7 @@ defmodule Exsh do
       symbol_table_lookup(token, symbol_table)
     end
   end
+
   def symbol_table_lookup(token, symbol_table) do
     if symbol_table[token] do
       symbol_table[token]
