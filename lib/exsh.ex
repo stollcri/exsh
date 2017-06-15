@@ -402,7 +402,9 @@ defmodule Exsh do
 
 
   def evaluate(parse_tree, symbol_table) do
-    build_command(parse_tree, symbol_table, "")
+    build_command(parse_tree, symbol_table, [])
+    |> Enum.join(" ")
+    # |> process_command
   end
 
   def build_command([], _, command) do
@@ -411,20 +413,19 @@ defmodule Exsh do
   def build_command(parse_tree, symbol_table, command) do
     [token | remaining_tokens] = parse_tree
     new_command = expand_token(token, symbol_table)
-    if command == "" do
-      build_command(remaining_tokens, symbol_table, new_command)
+    if command == [] do
+      build_command(remaining_tokens, symbol_table, [new_command])
     else
-      build_command(remaining_tokens, symbol_table, "#{command} #{new_command}")
+      build_command(remaining_tokens, symbol_table, command ++ [new_command])
     end
   end
   def expand_token(token, symbol_table) do
     if is_list(token) do
-      "(#{build_command(token, symbol_table, "")})"
+      "(#{build_command(token, symbol_table, [])})"
     else
       symbol_table_lookup(token, symbol_table)
     end
   end
-
   def symbol_table_lookup(token, symbol_table) do
     if symbol_table[token] do
       symbol_table[token]
