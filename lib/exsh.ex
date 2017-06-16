@@ -2,7 +2,7 @@ defmodule Exsh do
   @moduledoc """
   Documentation for Exsh.
 
-  mix escript.build; ./exsh "aa | 'bb (cc dd) ee'||ff(gg 'hh' ii)jj" --exit
+  mix escript.build; ./exsh "x = aa | 'bb (cc dd) ee'||ff(gg 'hh' ii)jj" --exit
   """
 
   def main(args) do
@@ -173,7 +173,12 @@ defmodule Exsh do
 
   """
   def tokenize(raw_string) do
-    scan(raw_string, "", [], [])
+    # scan(raw_string, "", [], [])
+    tmp = scan(raw_string, "", [], [])
+    tmp2 = tmp
+    |> Enum.join(", ")
+    IO.puts tmp2
+    tmp
   end
 
   @doc """
@@ -191,11 +196,23 @@ defmodule Exsh do
     ["pwd", :field_delimiter_begin]
     iex> Exsh.scan("'", "", [:field_delimiter_begin, "pwd"], ["'"])
     [:field_delimiter_begin, "pwd", :field_delimiter_end]
+    iex> Exsh.scan("", "", ["x", "=", :field_delimiter_begin, "pwd"], ["="])
+    ["x", "=", :field_delimiter_begin, "pwd", :field_delimiter_end]
+    iex> Exsh.scan("", "", ["pwd", "/tmp"], [])
+    ["pwd", "/tmp"]
 
   """
+  def scan("", "", tokens, []) do
+    tokens
+  end
+  def scan("", "", tokens, delimiters) do
+    [_ | delimiters_tail] = delimiters
+    scan("", "", tokens ++ [:field_delimiter_end], delimiters_tail)
+  end
   def scan("", lexeme, tokens, delimiters) do
-    {new_tokens, _, _} = lex(lexeme, " ", delimiters)
-    tokens ++ new_tokens
+    {new_tokens, lexeme, _} = lex(lexeme, " ", [])
+    tokens = tokens ++ new_tokens
+    scan("", lexeme, tokens, delimiters)
   end
   def scan(raw_string, lexeme, tokens, delimiters) do
     # TODO: implement look-back to merge subsequent field delimiters (e.g. ["|", "|"] -> ["||"])
@@ -232,6 +249,7 @@ defmodule Exsh do
   def lex(lexeme, character, delimiters) do
     {character_category, delimiters} = categorize_character(character, delimiters)
     case character_category do
+      :field_delimiter_hard -> {[character, :field_delimiter_begin], "", delimiters}
       :field_delimiter_begin when lexeme != "" -> {[lexeme, :field_delimiter_begin], "", delimiters}
       :field_delimiter_begin -> {[:field_delimiter_begin], "", delimiters}
       :field_delimiter_end when lexeme != "" -> {[lexeme, :field_delimiter_end], "", delimiters}
@@ -266,6 +284,7 @@ defmodule Exsh do
     delimiters_head = Enum.slice(delimiters, 0..0)
     delimiters_tail = Enum.slice(delimiters, 1..-1)
     case character_category do
+      :field_delimiter_hard -> {:field_delimiter_hard, [character] ++ delimiters}
       :field_delimiter_paired when [character] == delimiters_head ->
         {:field_delimiter_end, delimiters_tail}
       :field_delimiter_paired ->
@@ -301,10 +320,8 @@ defmodule Exsh do
   def categorize_character(character) do
     case character do
       " " -> :word_delimiter
-      "=" -> :field_delimiter
-      ">" -> :field_delimiter
-      "<" -> :field_delimiter
       "|" -> :field_delimiter
+      "=" -> :field_delimiter_hard
       "'" -> :field_delimiter_paired
       "(" -> :field_delimiter_begin
       ")" -> :field_delimiter_end
@@ -402,8 +419,9 @@ defmodule Exsh do
 
 
   def evaluate(parse_tree, symbol_table) do
-    build_command(parse_tree, symbol_table, [])
-    |> Enum.join(" ")
+    build_command(parse_tree, symbol_table, "")
+    # build_command(parse_tree, symbol_table, [])
+    # |> Enum.join("")
     # |> process_command
   end
 
@@ -413,18 +431,25 @@ defmodule Exsh do
   def build_command(parse_tree, symbol_table, command) do
     [token | remaining_tokens] = parse_tree
     new_command = expand_token(token, symbol_table)
-    if command == [] do
-      build_command(remaining_tokens, symbol_table, [new_command])
+    # if command == [] do
+    if command == "" do
+      final_command = build_command(remaining_tokens, symbol_table, [new_command])
     else
-      build_command(remaining_tokens, symbol_table, command ++ [new_command])
+      # final_command = build_command(remaining_tokens, symbol_table, command ++ [new_command])
+      final_command = build_command(remaining_tokens, symbol_table, "#{command} #{new_command}")
     end
+    # IO.puts final_command
+    final_command
   end
   def expand_token(token, symbol_table) do
     if is_list(token) do
-      "(#{build_command(token, symbol_table, [])})"
+      # final_command = "(#{build_command(token, symbol_table, [])})"
+      final_command = "(#{build_command(token, symbol_table, "")})"
     else
-      symbol_table_lookup(token, symbol_table)
+      final_command = symbol_table_lookup(token, symbol_table)
     end
+    IO.puts final_command
+    final_command
   end
   def symbol_table_lookup(token, symbol_table) do
     if symbol_table[token] do
