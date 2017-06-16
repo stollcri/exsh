@@ -177,7 +177,7 @@ defmodule Exsh do
     tmp = scan(raw_string, "", [], [])
     tmp2 = tmp
     |> Enum.join(", ")
-    IO.puts tmp2
+    IO.puts "TOKENS: #{tmp2}"
     tmp
   end
 
@@ -251,6 +251,8 @@ defmodule Exsh do
   def lex(lexeme, character, delimiters) do
     {character_category, delimiters} = categorize_character(character, delimiters)
     case character_category do
+      :field_delimiter_hard when lexeme != "" ->
+        {["#{lexeme}", :field_delimiter_end, character, :field_delimiter_begin], "", delimiters, [:field_delimiter_begin]}
       :field_delimiter_hard ->
         {[:field_delimiter_end, character, :field_delimiter_begin], "", delimiters, [:field_delimiter_begin]}
       :field_delimiter_begin when lexeme != "" -> {[lexeme, :field_delimiter_begin], "", delimiters, []}
@@ -344,10 +346,9 @@ defmodule Exsh do
     ["a", ["bb"], "ccc"]
     iex> Exsh.parse("a", [], [:field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
     ["a", ["bb"], "ccc"]
-    iex> Exsh.parse(["a", :field_delimiter_begin, "bb", :field_delimiter_begin, "ccc", "d", :field_delimiter_end, \
-    "e", :field_delimiter_end, "|", "f", "|", "g", :field_delimiter_begin, "h", :field_delimiter_begin, "i", \
-    :field_delimiter_end, "j", "k", :field_delimiter_end])
-    ["a", ["bb", ["ccc", "d"], "e"], "|", "f", "|", "g", ["h", ["i"], "j", "k"]]
+    iex> Exsh.parse(["a", :field_delimiter_begin, :field_delimiter_begin, \
+    "bb", :field_delimiter_end, "ccc", :field_delimiter_end])
+    ["a", [["bb"], "ccc"]]
 
   """
   def parse(raw_tokens) do
