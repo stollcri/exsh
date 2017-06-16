@@ -2,7 +2,7 @@ defmodule Exsh do
   @moduledoc """
   Documentation for Exsh.
 
-  mix escript.build; ./exsh "x = aa | 'bb (cc dd) ee'||ff(gg 'hh' ii)jj" --exit
+  mix escript.build; ./exsh "x | y=aa | 'bb (ls cc) dd'||ee(ff 'dirsizes' gg)hh" --exit
   """
 
   def main(args) do
@@ -210,55 +210,58 @@ defmodule Exsh do
     scan("", "", tokens ++ [:field_delimiter_end], delimiters_tail)
   end
   def scan("", lexeme, tokens, delimiters) do
-    {new_tokens, lexeme, _} = lex(lexeme, " ", [])
-    tokens = tokens ++ new_tokens
+    {new_tokens, lexeme, _, prepend} = lex(lexeme, " ", [])
+    tokens = prepend ++ tokens ++ new_tokens
     scan("", lexeme, tokens, delimiters)
   end
   def scan(raw_string, lexeme, tokens, delimiters) do
     # TODO: implement look-back to merge subsequent field delimiters (e.g. ["|", "|"] -> ["||"])
     character = String.slice(raw_string, 0..0)
     remainder = String.slice(raw_string, 1..-1)
-    {new_tokens, lexeme, delimiters} = lex(lexeme, character, delimiters)
-    tokens = tokens ++ new_tokens
+    {new_tokens, lexeme, delimiters, prepend} = lex(lexeme, character, delimiters)
+    tokens = prepend ++ tokens ++ new_tokens
     scan(remainder, lexeme, tokens, delimiters)
   end
 
   @doc """
   Create tokens from the `lexeme` (when `character` is a delimiter, while considering `delimiters`)
   
-  Returns `{[tokens], "lexeme", [delimiters]}`
+  Returns `{[tokens], "lexeme", [delimiters], [pre-pend_tokens]}`
   
   ## Examples
 
     iex> Exsh.lex("pwd", "'", [])
-    {["pwd", :field_delimiter_begin], "", ["'"]}
+    {["pwd", :field_delimiter_begin], "", ["'"], []}
     iex> Exsh.lex("", "'", [])
-    {[:field_delimiter_begin], "", ["'"]}
+    {[:field_delimiter_begin], "", ["'"], []}
     iex> Exsh.lex("pwd a", "'", ["'"])
-    {["pwd a", :field_delimiter_end], "", []}
+    {["pwd a", :field_delimiter_end], "", [], []}
     iex> Exsh.lex("", "'", ["'"])
-    {[:field_delimiter_end], "", []}
+    {[:field_delimiter_end], "", [], []}
     iex> Exsh.lex("pwd", " ", [])
-    {["pwd"], "", []}
+    {["pwd"], "", [], []}
     iex> Exsh.lex("pwd", " ", ["'"])
-    {["pwd"], "", ["'"]}
+    {["pwd"], "", ["'"], []}
     iex> Exsh.lex("pw", "d", [])
-    {[], "pwd", []}
+    {[], "pwd", [], []}
+    iex> Exsh.lex("", "=", [])
+    {[:field_delimiter_end, "=", :field_delimiter_begin], "", ["="], [:field_delimiter_begin]}
 
   """
   def lex(lexeme, character, delimiters) do
     {character_category, delimiters} = categorize_character(character, delimiters)
     case character_category do
-      :field_delimiter_hard -> {[character, :field_delimiter_begin], "", delimiters}
-      :field_delimiter_begin when lexeme != "" -> {[lexeme, :field_delimiter_begin], "", delimiters}
-      :field_delimiter_begin -> {[:field_delimiter_begin], "", delimiters}
-      :field_delimiter_end when lexeme != "" -> {[lexeme, :field_delimiter_end], "", delimiters}
-      :field_delimiter_end -> {[:field_delimiter_end], "", delimiters}
-      :field_delimiter when lexeme != "" -> {[lexeme, character], "", delimiters}
-      :field_delimiter -> {[character], "", delimiters}
-      :word_delimiter when lexeme != "" -> {[lexeme], "", delimiters}
-      :word_delimiter -> {[], "", delimiters}
-      _ -> {[], "#{lexeme}#{character}", delimiters}
+      :field_delimiter_hard ->
+        {[:field_delimiter_end, character, :field_delimiter_begin], "", delimiters, [:field_delimiter_begin]}
+      :field_delimiter_begin when lexeme != "" -> {[lexeme, :field_delimiter_begin], "", delimiters, []}
+      :field_delimiter_begin -> {[:field_delimiter_begin], "", delimiters, []}
+      :field_delimiter_end when lexeme != "" -> {[lexeme, :field_delimiter_end], "", delimiters, []}
+      :field_delimiter_end -> {[:field_delimiter_end], "", delimiters, []}
+      :field_delimiter when lexeme != "" -> {[lexeme, character], "", delimiters, []}
+      :field_delimiter -> {[character], "", delimiters, []}
+      :word_delimiter when lexeme != "" -> {[lexeme], "", delimiters, []}
+      :word_delimiter -> {[], "", delimiters, []}
+      _ -> {[], "#{lexeme}#{character}", delimiters, []}
     end
   end
 
