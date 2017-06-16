@@ -2,7 +2,7 @@ defmodule Exsh do
   @moduledoc """
   Documentation for Exsh.
 
-  mix escript.build; ./exsh "x | y=aa | 'bb (ls cc) dd'||ee(ff 'dirsizes' gg)hh" --exit
+  mix escript.build; ./exsh "x | y=aa | 'bb (ls cc) dd'||ee(ff 'alias' gg)hh" --exit
   """
 
   def main(args) do
@@ -64,8 +64,8 @@ defmodule Exsh do
   end
   def repl(options, command_string) do
     symbol_map = %{
-      "ls" => "/bin/ls -AGhl",
-      "dirsizes" => "ls | du -chd 1 | sort"
+      "alias" => "vars",
+      "env" => "vars"
     }
     input = read(options, command_string)
     {stdout, stderr, exitcode} = eval(options, symbol_map, input)
@@ -173,12 +173,12 @@ defmodule Exsh do
 
   """
   def tokenize(raw_string) do
-    # scan(raw_string, "", [], [])
-    tmp = scan(raw_string, "", [], [])
-    tmp2 = tmp
-    |> Enum.join(", ")
-    IO.puts "TOKENS: #{tmp2}"
-    tmp
+    scan(raw_string, "", [], [])
+    # tmp = scan(raw_string, "", [], [])
+    # tmp2 = tmp
+    # |> Enum.join(", ")
+    # IO.puts "TOKENS: #{tmp2}"
+    # tmp
   end
 
   @doc """
@@ -343,16 +343,17 @@ defmodule Exsh do
   ## Examples
 
     iex> Exsh.parse(["a", :field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
-    ["a", ["bb"], "ccc"]
+    [["a", ["bb"], "ccc"]]
     iex> Exsh.parse("a", [], [:field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
     ["a", ["bb"], "ccc"]
     iex> Exsh.parse(["a", :field_delimiter_begin, :field_delimiter_begin, \
     "bb", :field_delimiter_end, "ccc", :field_delimiter_end])
-    ["a", [["bb"], "ccc"]]
+    [["a", [["bb"], "ccc"]]]
 
   """
   def parse(raw_tokens) do
-    [raw_tokens_head | raw_tokens_tail] = raw_tokens
+    wrapped_tokens = [:field_delimiter_begin] ++ raw_tokens ++ [:field_delimiter_end]
+    [raw_tokens_head | raw_tokens_tail] = wrapped_tokens
     parse(raw_tokens_head, [], raw_tokens_tail)
   end
   def parse(current_token, pending_tokens, []) do
@@ -423,8 +424,8 @@ defmodule Exsh do
 
 
   def evaluate(parse_tree, symbol_table) do
-    build_command(parse_tree, symbol_table, "")
-    # build_command(parse_tree, symbol_table, [])
+    # build_command(parse_tree, symbol_table, "")
+    build_command(parse_tree, symbol_table, [])
     # |> Enum.join("")
     # |> process_command
   end
@@ -435,25 +436,19 @@ defmodule Exsh do
   def build_command(parse_tree, symbol_table, command) do
     [token | remaining_tokens] = parse_tree
     new_command = expand_token(token, symbol_table)
-    # if command == [] do
-    if command == "" do
-      final_command = build_command(remaining_tokens, symbol_table, [new_command])
+    if command == [] do
+      build_command(remaining_tokens, symbol_table, [new_command])
     else
-      # final_command = build_command(remaining_tokens, symbol_table, command ++ [new_command])
-      final_command = build_command(remaining_tokens, symbol_table, "#{command} #{new_command}")
+      build_command(remaining_tokens, symbol_table, command ++ [new_command])
     end
-    # IO.puts final_command
-    final_command
   end
   def expand_token(token, symbol_table) do
     if is_list(token) do
-      # final_command = "(#{build_command(token, symbol_table, [])})"
-      final_command = "(#{build_command(token, symbol_table, "")})"
+      build_command(token, symbol_table, [])
+      |> execute_command
     else
-      final_command = symbol_table_lookup(token, symbol_table)
+      symbol_table_lookup(token, symbol_table)
     end
-    IO.puts final_command
-    final_command
   end
   def symbol_table_lookup(token, symbol_table) do
     if symbol_table[token] do
@@ -461,6 +456,17 @@ defmodule Exsh do
     else
       token
     end
+  end
+
+  def execute_command(command_list) do
+    [command | arguments] = command_list
+    # {result, exit_code} = System.cmd(command, arguments)
+    # result
+
+    command_string = command_list
+    |> Enum.join("/")
+    |> String.to_char_list
+    |> :os.cmd
   end
 
 end
