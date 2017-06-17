@@ -14,16 +14,22 @@ defmodule Exsh do
   defp parse_args(args) do
     options_default = %{
       :version => "0.0.1",
+      :prompt => "> ",
       :help => :false,
+      :nosymbols => false,
+      :quiet => :false,
       :exit => :false
     }
     {options_input, command_strings, _} = OptionParser.parse(args,
       strict: [
         help: :boolean,
+        nosymbols: :boolean,
+        quiet: :boolean,
         exit: :boolean
       ],
       aliases: [
         h: :help,
+        q: :quiet,
         x: :exit
       ]
     )
@@ -42,8 +48,10 @@ defmodule Exsh do
 
     exsh [options] [commands]
       options:
-        -h, --help    Print this help
-        -x, --exit    Exit after running command
+        -h, --help          Print this help
+            --nosymbols     Do not use symbol table
+        -q, --quiet         Supress standard output
+        -x, --exit          Exit after running command
 
       Built-in shell commands:
         help          Print this help
@@ -63,12 +71,20 @@ defmodule Exsh do
     repl(options, command_string)
   end
   def repl(options, command_string) do
-    symbol_map = %{
+    symbols = %{
       "alias" => "vars",
-      "env" => "vars"
+      "env" => "vars",
+      "l" => "/bin/ls -CF",
+      "la" => "/bin/ls -AG",
+      "ll" => "/bin/ls -AGhl",
+      "df" => "/bin/df -h",
+      "grep" => "/usr/bin/grep --color=auto",
+      "egrep" => "/usr/bin/egrep --color=auto",
+      "fgrep" => "/usr/bin/fgrep --color=auto",
+      "dirsize" => "ls | du -chd 1 | sort"
     }
     input = read(options, command_string)
-    {stdout, stderr, exitcode} = eval(options, symbol_map, input)
+    {stdout, stderr, exitcode} = eval(options, symbols, input)
     if exitcode != -1 do
       print(options, stdout, stderr)
 
@@ -88,13 +104,13 @@ defmodule Exsh do
 
   ## Examples
 
-    iex> Exsh.read([], " pwd ")
+    iex> Exsh.read(%{:prompt => "> "}, " pwd ")
     "pwd"
 
   """
   def read(options, command_string) do
     if command_string == "" do
-      IO.gets("> ")
+      IO.gets(options[:prompt])
     else
       command_string
     end
@@ -117,17 +133,13 @@ defmodule Exsh do
     {"", "", -1}
   end
   def eval(options, symbols, command_string) do
-    case command_string do
-      "help" -> {help_message(options), "", 0}
-      "vars" -> {get_symbols_as_string(symbols), "", 0}
-      _ -> eval_command(options, symbols, command_string)
-    end
+    eval_command(options, symbols, command_string)
   end
   def eval_command(options, symbols, command_string) do
     stdout = command_string
     |> tokenize
     |> parse
-    |> evaluate(symbols)
+    |> evaluate(options, symbols)
     stderr = ""
     exitcode = 0
     {stdout, stderr, exitcode}
@@ -147,7 +159,7 @@ defmodule Exsh do
   def print() do end
   def print(_, "", "") do end
   def print(options, stdout, stderr) do
-    if stdout != "" do
+    if stdout != "" and not options[:quiet] do
       IO.puts stdout
     end
     if stderr != "" do
@@ -412,6 +424,7 @@ defmodule Exsh do
     {stack, poped} = find_delimiter(stack, poped)
     group_tokens(stack, poped)
   end
+
   def find_delimiter(stack, poped) do
     stack_last = Enum.slice(stack, -1..-1)
     stack_fore = Enum.slice(stack, 0..-2)
@@ -423,50 +436,68 @@ defmodule Exsh do
 
 
 
-  def evaluate(parse_tree, symbol_table) do
-    # build_command(parse_tree, symbol_table, "")
-    build_command(parse_tree, symbol_table, [])
+  def evaluate(parse_tree, options, symbols) do
+    # build_command(parse_tree, symbols, "")
+    build_command(parse_tree, options, symbols, [])
     # |> Enum.join("")
     # |> process_command
   end
 
-  def build_command([], _, command) do
+  def build_command([], _, _, command) do
     command
   end
-  def build_command(parse_tree, symbol_table, command) do
+  def build_command(parse_tree, options, symbols, command) do
     [token | remaining_tokens] = parse_tree
-    new_command = expand_token(token, symbol_table)
+    new_command = expand_token(token, options, symbols)
     if command == [] do
-      build_command(remaining_tokens, symbol_table, [new_command])
+      build_command(remaining_tokens, options, symbols, [new_command])
     else
-      build_command(remaining_tokens, symbol_table, command ++ [new_command])
+      build_command(remaining_tokens, options, symbols, command ++ [new_command])
     end
   end
-  def expand_token(token, symbol_table) do
+
+  def expand_token(token, options, symbols) do
     if is_list(token) do
-      build_command(token, symbol_table, [])
-      |> execute_command
+      build_command(token, options, symbols, [])
+      |> execute_command(options, symbols)
     else
-      symbol_table_lookup(token, symbol_table)
+      symbols_lookup(token, options, symbols)
     end
   end
-  def symbol_table_lookup(token, symbol_table) do
-    if symbol_table[token] do
-      symbol_table[token]
+
+  def symbols_lookup(token, options, symbols) do
+    if not options[:nosymbols] do
+      if symbols[token] do
+        symbols[token]
+      else
+        token
+      end
     else
       token
     end
   end
 
-  def execute_command(command_list) do
-    [command | arguments] = command_list
+
+  def execute_command([], _, _) do
+    ""
+  end
+  def execute_command(command_list, options, symbols) do
+    [command | _] = command_list
+    case command do
+      "help" -> help_message(options)
+      "vars" -> get_symbols_as_string(symbols)
+      _ -> execute_os_command(command_list)
+    end
+  end
+  def execute_os_command(command_list) do
+    # [command | arguments] = command_list
     # {result, exit_code} = System.cmd(command, arguments)
     # result
 
-    command_string = command_list
-    |> Enum.join("/")
+    command_list
+    |> Enum.join(" ")
     |> String.to_char_list
-    |> :os.cmd
+    # |> :os.cmd
   end
 
 end
