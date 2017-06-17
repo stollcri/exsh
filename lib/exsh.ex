@@ -58,6 +58,7 @@ defmodule Exsh do
         vars          Print symbol table
         exit          Exit the shell
     """
+    |> String.trim
   end
 
   @doc """
@@ -97,8 +98,7 @@ defmodule Exsh do
   end
 
   @doc """
-  Read user input -- gather interactively or use `command_string`
-  The `options` are currently ignored
+  Read user input -- gather interactively or use `command_string` considering `options`
 
   Returns `command_string`
 
@@ -118,8 +118,7 @@ defmodule Exsh do
   end
 
   @doc """
-  Evaluate user input given in the `command_string`
-  The `options` are currently ignored
+  Evaluate user input given the `command_string` using the `symbols` and considering `options`
 
   Returns `{stdout, stderr, exitcode}`
 
@@ -153,8 +152,7 @@ defmodule Exsh do
   end
 
   @doc """
-  Print command output given in the `stdout` and `stderr`
-  The `options` are currently ignored
+  Print command output given in the `stdout` and `stderr` considering `options`
   """
   def print() do end
   def print(_, "", "") do end
@@ -435,12 +433,23 @@ defmodule Exsh do
   end
 
 
+  @doc """
+  Evaluate the `parse_tree` considering `options` and `symbols`
 
+  Returns `[stack]`
+
+  ## Examples
+
+    iex> Exsh.evaluate([["vers"]], %{:version => "0.0.0", :nosymbols => true}, %{})
+    "0.0.0"
+    iex> Exsh.evaluate([["srev"]], %{:version => "0.0.0", :nosymbols => false}, %{"srev" => "vers"})
+    "0.0.0"
+
+  """
   def evaluate(parse_tree, options, symbols) do
-    # build_command(parse_tree, symbols, "")
     build_command(parse_tree, options, symbols, [])
-    # |> Enum.join("")
-    # |> process_command
+    |> Enum.join("")
+    |> String.trim
   end
 
   def build_command([], _, _, command) do
@@ -486,6 +495,7 @@ defmodule Exsh do
     case command do
       "help" -> help_message(options)
       "vars" -> get_symbols_as_string(symbols)
+      "vers" -> options[:version]
       _ -> execute_os_command(command_list)
     end
   end
@@ -497,7 +507,7 @@ defmodule Exsh do
     command_list
     |> Enum.join(" ")
     |> String.to_char_list
-    # |> :os.cmd
+    |> :os.cmd
   end
 
 end
