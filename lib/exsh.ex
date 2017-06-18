@@ -13,7 +13,7 @@ defmodule Exsh do
 
   defp parse_args(args) do
     options_default = %{
-      :version => "0.0.1",
+      :version => "mk I, rev 1, no 1",
       :prompt => IO.ANSI.green <> "> " <> IO.ANSI.reset,
       :help => :false,
       :nosymbols => false,
