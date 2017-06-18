@@ -14,7 +14,7 @@ defmodule Exsh do
 
   defp parse_args(args) do
     options_default = %{
-      :version => "mk II, rev 1, no 1",
+      :version => Application.get_env(:exsh, :version),
       :prompt => IO.ANSI.green <> "> " <> IO.ANSI.reset,
       :help => :false,
       :nosymbols => false,
