@@ -6,6 +6,7 @@ defmodule Exsh do
   """
   use Exsh.Repl.Read
   use Exsh.Repl.Eval
+  use Exsh.Repl.Print
 
   def main(args) do
     args
@@ -78,20 +79,4 @@ defmodule Exsh do
       end
     end
   end
-
-  @doc """
-  Print command output given in the `stdout` and `stderr` considering `options`
-  """
-  def print() do end
-  def print(_, "", "") do end
-  def print(options, stdout, stderr) do
-    if stdout != "" and not options[:quiet] do
-      IO.puts stdout
-    end
-    if stderr != "" do
-      stderr = IO.ANSI.red <> stderr <> IO.ANSI.reset
-      IO.puts :stderr, stderr
-    end
-  end
-
 end
