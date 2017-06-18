@@ -4,6 +4,7 @@ defmodule Exsh do
 
   mix escript.build; ./exsh "x | y=aa | 'bb (ls cc) dd'||ee(ff 'alias' gg)hh" --exit
   """
+  use Exsh.Messages
 
   def main(args) do
     args
@@ -13,7 +14,7 @@ defmodule Exsh do
 
   defp parse_args(args) do
     options_default = %{
-      :version => "mk I, rev 1, no 1",
+      :version => "mk II, rev 1, no 1",
       :prompt => IO.ANSI.green <> "> " <> IO.ANSI.reset,
       :help => :false,
       :nosymbols => false,
@@ -39,26 +40,6 @@ defmodule Exsh do
     else
       {options, command_strings}
     end
-  end
-
-  def help_message(options) do
-    """
-    exsh, version #{options[:version]}
-    https://github.com/stollcri/exsh
-
-    exsh [options] [commands]
-      options:
-        -h, --help          Print this help
-            --nosymbols     Do not use symbol table
-        -q, --quiet         Supress standard output
-        -x, --exit          Exit after running command
-
-      Built-in shell commands:
-        help          Print this help
-        vars          Print symbol table
-        exit          Exit the shell
-    """
-    |> String.trim
   end
 
   @doc """
@@ -440,9 +421,9 @@ defmodule Exsh do
   ## Examples
 
     iex> Exsh.evaluate([["vers"]], %{:version => "0.0.0", :nosymbols => true}, %{})
-    "0.0.0"
+    {"0.0.0", "", 0}
     iex> Exsh.evaluate([["srev"]], %{:version => "0.0.0", :nosymbols => false}, %{"srev" => "vers"})
-    "0.0.0"
+    {"0.0.0", "", 0}
 
   """
   def evaluate(parse_tree, options, symbols) do
@@ -488,14 +469,13 @@ defmodule Exsh do
     end
   end
 
-
   def execute_command([], _, _) do
     ""
   end
   def execute_command(command_list, options, symbols) do
     [command | _] = command_list
     case command do
-      "help" -> help_message(options)
+      "help" -> help(options)
       "vars" -> get_symbols_as_string(symbols)
       "vers" -> options[:version]
       _ -> execute_os_command(command_list)
