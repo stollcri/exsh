@@ -370,7 +370,7 @@ defmodule Exsh.Repl.Eval do
     [command | _] = command_list
     case command do
       "help" -> help(options)
-      "vars" -> get_symbols_as_string(symbols)
+      "symbols" -> get_symbols_as_string(symbols)
       "vers" -> options[:version]
       _ -> execute_os_command(command_list)
     end

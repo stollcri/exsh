@@ -17,24 +17,39 @@ defmodule Exsh do
       :version => Application.get_env(:exsh, :version),
       :prompt => IO.ANSI.green <> "> " <> IO.ANSI.reset,
       :help => :false,
-      :nosymbols => false,
-      :quiet => :false,
+      :loud => 0,
+      :noise => 0,
+      :nosymbols => :false,
+      :quiet => 0,
+      :symbols => [],
       :exit => :false
     }
     {options_input, command_strings, _} = OptionParser.parse(args,
       strict: [
         help: :boolean,
-        nosymbols: :boolean,
-        quiet: :boolean,
-        exit: :boolean
+        loud: :count,
+        quiet: :count,
+        symbol: :keep,
+        exit: :boolean,
+        nosymbols: :boolean
       ],
       aliases: [
         h: :help,
+        l: :loud,
         q: :quiet,
+        s: :symbol,
         x: :exit
       ]
     )
+    IO.inspect options_input
     options = Enum.into(options_input, options_default)
+    IO.inspect options
+
+    # let's not deal with both loud and quiet everywhere
+    # the noise option should be used to get verbosity
+    noise = options[:loud] - options[:quiet]
+    options = Enum.into(%{:noise => noise}, options)
+
     if options[:help] do
       {Enum.into(%{:exit => :true}, options), ["help"]}
     else

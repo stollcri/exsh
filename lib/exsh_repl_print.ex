@@ -1,5 +1,5 @@
 defmodule Exsh.Repl.Print do
-	
+
   defmacro __using__(_) do
     quote do
       import Exsh.Repl.Print
@@ -12,7 +12,7 @@ defmodule Exsh.Repl.Print do
   def print() do end
   def print(_, "", "") do end
   def print(options, stdout, stderr) do
-    if stdout != "" and not options[:quiet] do
+    if stdout != "" and options[:noise] >= 0 do
       IO.puts stdout
     end
     if stderr != "" do

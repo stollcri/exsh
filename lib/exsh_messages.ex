@@ -1,5 +1,5 @@
 defmodule Exsh.Messages do
-	
+
   defmacro __using__(_) do
     quote do
       import Exsh.Messages
@@ -25,14 +25,16 @@ defmodule Exsh.Messages do
 
     exsh [options] [commands]
       options:
-        -h, --help          Print this help
-            --nosymbols     Do not use symbol table
-        -q, --quiet         Supress standard output
-        -x, --exit          Exit after running command
+        -h, --help          			Show this help
+        -l, --loud								Show more information
+        -q, --quiet         			Show less information
+        -s, --symbol NAME=VALUE		Assign a variable
+        -x, --exit          			Exit after running command
+            --nosymbols     			Do not use symbol table
 
       Built-in shell commands:
         help          Print this help
-        vars          Print symbol table
+        symbols       Print symbol table
         exit          Exit the shell
     """
     |> String.trim
