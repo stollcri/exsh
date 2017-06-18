@@ -14,7 +14,7 @@ defmodule Exsh do
   defp parse_args(args) do
     options_default = %{
       :version => "0.0.1",
-      :prompt => "> ",
+      :prompt => IO.ANSI.green <> "> " <> IO.ANSI.reset,
       :help => :false,
       :nosymbols => false,
       :quiet => :false,
@@ -135,12 +135,10 @@ defmodule Exsh do
     eval_command(options, symbols, command_string)
   end
   def eval_command(options, symbols, command_string) do
-    stdout = command_string
+    {stdout, stderr, exitcode} = command_string
     |> tokenize
     |> parse
     |> evaluate(options, symbols)
-    stderr = ""
-    exitcode = 0
     {stdout, stderr, exitcode}
   end
   def get_symbols_as_string(symbols) do
@@ -161,6 +159,7 @@ defmodule Exsh do
       IO.puts stdout
     end
     if stderr != "" do
+      stderr = IO.ANSI.red <> stderr <> IO.ANSI.reset
       IO.puts :stderr, stderr
     end
   end
@@ -447,9 +446,12 @@ defmodule Exsh do
 
   """
   def evaluate(parse_tree, options, symbols) do
-    build_command(parse_tree, options, symbols, [])
+    stdout = build_command(parse_tree, options, symbols, [])
     |> Enum.join("")
     |> String.trim
+    stderr = ""
+    exitcode = 0
+    {stdout, stderr, exitcode}
   end
 
   def build_command([], _, _, command) do
@@ -499,9 +501,25 @@ defmodule Exsh do
       _ -> execute_os_command(command_list)
     end
   end
+
   def execute_os_command(command_list) do
-    # [command | arguments] = command_list
-    # {result, exit_code} = System.cmd(command, arguments)
+    # # the line below this is good enough for commands that go through the parser,
+    # # but symbols are substituted late, so that does not work for them
+    # [cmd | args] = command_list
+
+    # # this is required for commands that come from the symbol table
+    # cmd_list = String.split(cmd, " ")
+    # [cmd_list_head | cmd_list_tail] = cmd_list
+    # command = cmd_list_head
+
+    # args_list = args ++ cmd_list_tail
+    # arg_joined = args_list |> Enum.join(" ")
+    # arguments = case arg_joined do
+    #   "" -> []
+    #   _ -> [arg_joined]
+    # end
+
+    # {result, _} = System.cmd(command, arguments, [stderr_to_stdout: true])
     # result
 
     command_list
