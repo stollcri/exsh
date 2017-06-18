@@ -14,7 +14,7 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.eval([], [], "exit")
+    iex> Exsh.Repl.Eval.eval([], [], "exit")
     {"", "", -1}
 
   """
@@ -48,11 +48,11 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.tokenize("pwd")
+    iex> Exsh.Repl.Eval.tokenize("pwd")
     ["pwd"]
-    iex> Exsh.tokenize("pwd /tmp")
+    iex> Exsh.Repl.Eval.tokenize("pwd /tmp")
     ["pwd", "/tmp"]
-    iex> Exsh.tokenize("pwd '/tmp /temp'")
+    iex> Exsh.Repl.Eval.tokenize("pwd '/tmp /temp'")
     ["pwd", :field_delimiter_begin, "/tmp", "/temp", :field_delimiter_end]
 
   """
@@ -72,17 +72,17 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.scan("pwd", "", [], [])
+    iex> Exsh.Repl.Eval.scan("pwd", "", [], [])
     ["pwd"]
-    iex> Exsh.scan("d", "pw", [], [])
+    iex> Exsh.Repl.Eval.scan("d", "pw", [], [])
     ["pwd"]
-    iex> Exsh.scan("(", "", ["pwd"], [])
+    iex> Exsh.Repl.Eval.scan("(", "", ["pwd"], [])
     ["pwd", :field_delimiter_begin]
-    iex> Exsh.scan("'", "", [:field_delimiter_begin, "pwd"], ["'"])
+    iex> Exsh.Repl.Eval.scan("'", "", [:field_delimiter_begin, "pwd"], ["'"])
     [:field_delimiter_begin, "pwd", :field_delimiter_end]
-    iex> Exsh.scan("", "", ["x", "=", :field_delimiter_begin, "pwd"], ["="])
+    iex> Exsh.Repl.Eval.scan("", "", ["x", "=", :field_delimiter_begin, "pwd"], ["="])
     ["x", "=", :field_delimiter_begin, "pwd", :field_delimiter_end]
-    iex> Exsh.scan("", "", ["pwd", "/tmp"], [])
+    iex> Exsh.Repl.Eval.scan("", "", ["pwd", "/tmp"], [])
     ["pwd", "/tmp"]
 
   """
@@ -114,21 +114,21 @@ defmodule Exsh.Repl.Eval do
   
   ## Examples
 
-    iex> Exsh.lex("pwd", "'", [])
+    iex> Exsh.Repl.Eval.lex("pwd", "'", [])
     {["pwd", :field_delimiter_begin], "", ["'"], []}
-    iex> Exsh.lex("", "'", [])
+    iex> Exsh.Repl.Eval.lex("", "'", [])
     {[:field_delimiter_begin], "", ["'"], []}
-    iex> Exsh.lex("pwd a", "'", ["'"])
+    iex> Exsh.Repl.Eval.lex("pwd a", "'", ["'"])
     {["pwd a", :field_delimiter_end], "", [], []}
-    iex> Exsh.lex("", "'", ["'"])
+    iex> Exsh.Repl.Eval.lex("", "'", ["'"])
     {[:field_delimiter_end], "", [], []}
-    iex> Exsh.lex("pwd", " ", [])
+    iex> Exsh.Repl.Eval.lex("pwd", " ", [])
     {["pwd"], "", [], []}
-    iex> Exsh.lex("pwd", " ", ["'"])
+    iex> Exsh.Repl.Eval.lex("pwd", " ", ["'"])
     {["pwd"], "", ["'"], []}
-    iex> Exsh.lex("pw", "d", [])
+    iex> Exsh.Repl.Eval.lex("pw", "d", [])
     {[], "pwd", [], []}
-    iex> Exsh.lex("", "=", [])
+    iex> Exsh.Repl.Eval.lex("", "=", [])
     {[:field_delimiter_end, "=", :field_delimiter_begin], "", ["="], [:field_delimiter_begin]}
 
   """
@@ -158,13 +158,13 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.categorize_character("'", ["'"])
+    iex> Exsh.Repl.Eval.categorize_character("'", ["'"])
     {:field_delimiter_end, []}
-    iex> Exsh.categorize_character("'", [])
+    iex> Exsh.Repl.Eval.categorize_character("'", [])
     {:field_delimiter_begin, ["'"]}
-    iex> Exsh.categorize_character("a", [])
+    iex> Exsh.Repl.Eval.categorize_character("a", [])
     {:character, []}
-    iex> Exsh.categorize_character("a", ["'"])
+    iex> Exsh.Repl.Eval.categorize_character("a", ["'"])
     {:character, ["'"]}
 
   """
@@ -188,21 +188,21 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.categorize_character(" ")
+    iex> Exsh.Repl.Eval.categorize_character(" ")
     :word_delimiter
-    iex> Exsh.categorize_character("|")
+    iex> Exsh.Repl.Eval.categorize_character("|")
     :field_delimiter
-    iex> Exsh.categorize_character("'")
+    iex> Exsh.Repl.Eval.categorize_character("'")
     :field_delimiter_paired
-    iex> Exsh.categorize_character("(")
+    iex> Exsh.Repl.Eval.categorize_character("(")
     :field_delimiter_begin
-    iex> Exsh.categorize_character(")")
+    iex> Exsh.Repl.Eval.categorize_character(")")
     :field_delimiter_end
-    iex> Exsh.categorize_character(";")
+    iex> Exsh.Repl.Eval.categorize_character(";")
     :line_delimiter
-    iex> Exsh.categorize_character("a")
+    iex> Exsh.Repl.Eval.categorize_character("a")
     :character
-    iex> Exsh.categorize_character("0")
+    iex> Exsh.Repl.Eval.categorize_character("0")
     :character
 
   """
@@ -226,11 +226,11 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.parse(["a", :field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
+    iex> Exsh.Repl.Eval.parse(["a", :field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
     [["a", ["bb"], "ccc"]]
-    iex> Exsh.parse("a", [], [:field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
+    iex> Exsh.Repl.Eval.parse("a", [], [:field_delimiter_begin, "bb", :field_delimiter_end, "ccc"])
     ["a", ["bb"], "ccc"]
-    iex> Exsh.parse(["a", :field_delimiter_begin, :field_delimiter_begin, \
+    iex> Exsh.Repl.Eval.parse(["a", :field_delimiter_begin, :field_delimiter_begin, \
     "bb", :field_delimiter_end, "ccc", :field_delimiter_end])
     [["a", [["bb"], "ccc"]]]
 
@@ -256,9 +256,9 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.parse_next(:field_delimiter_end, ["a", :field_delimiter_begin, "b"])
+    iex> Exsh.Repl.Eval.parse_next(:field_delimiter_end, ["a", :field_delimiter_begin, "b"])
     ["a", ["b"]]
-    iex> Exsh.parse_next("b", ["a"])
+    iex> Exsh.Repl.Eval.parse_next("b", ["a"])
     ["a", "b"]
 
   """
@@ -280,9 +280,9 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.group_tokens(["a", :field_delimiter_begin, "b"])
+    iex> Exsh.Repl.Eval.group_tokens(["a", :field_delimiter_begin, "b"])
     ["a", ["b"]]
-    iex> Exsh.group_tokens(["a", "b"])
+    iex> Exsh.Repl.Eval.group_tokens(["a", "b"])
     ["a", "b"]
 
   """
@@ -314,9 +314,9 @@ defmodule Exsh.Repl.Eval do
 
   ## Examples
 
-    iex> Exsh.evaluate([["vers"]], %{:version => "0.0.0", :nosymbols => true}, %{})
+    iex> Exsh.Repl.Eval.evaluate([["vers"]], %{:version => "0.0.0", :nosymbols => true}, %{})
     {"0.0.0", "", 0}
-    iex> Exsh.evaluate([["srev"]], %{:version => "0.0.0", :nosymbols => false}, %{"srev" => "vers"})
+    iex> Exsh.Repl.Eval.evaluate([["srev"]], %{:version => "0.0.0", :nosymbols => false}, %{"srev" => "vers"})
     {"0.0.0", "", 0}
 
   """

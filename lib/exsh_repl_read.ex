@@ -1,5 +1,5 @@
 defmodule Exsh.Repl.Read do
-  
+
   defmacro __using__(_) do
     quote do
       import Exsh.Repl.Read
@@ -13,7 +13,7 @@ defmodule Exsh.Repl.Read do
 
   ## Examples
 
-    iex> Exsh.read(%{:prompt => "> "}, " pwd ")
+    iex> Exsh.Repl.Read.read(%{:prompt => "> "}, " pwd ")
     "pwd"
 
   """
