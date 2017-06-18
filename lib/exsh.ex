@@ -4,9 +4,7 @@ defmodule Exsh do
 
   mix escript.build; ./exsh "x | y=aa | 'bb (ls cc) dd'||ee(ff 'alias' gg)hh" --exit
   """
-  use Exsh.Repl.Read
-  use Exsh.Repl.Eval
-  use Exsh.Repl.Print
+  use Exsh.Repl
 
   def main(args) do
     args
@@ -41,42 +39,6 @@ defmodule Exsh do
       {Enum.into(%{:exit => :true}, options), ["help"]}
     else
       {options, command_strings}
-    end
-  end
-
-  @doc """
-  Read, Evaluate, Print, Loop
-  """
-  def repl({options, []}) do
-    repl(options, "")
-  end
-  def repl({options, [command_string | _]}) do
-    # TODO: loop over tail of command_string list to process subsequent commands
-    repl(options, command_string)
-  end
-  def repl(options, command_string) do
-    symbols = %{
-      "alias" => "vars",
-      "env" => "vars",
-      "l" => "/bin/ls -CF",
-      "la" => "/bin/ls -AG",
-      "ll" => "/bin/ls -AGhl",
-      "df" => "/bin/df -h",
-      "grep" => "/usr/bin/grep --color=auto",
-      "egrep" => "/usr/bin/egrep --color=auto",
-      "fgrep" => "/usr/bin/fgrep --color=auto",
-      "dirsize" => "ls | du -chd 1 | sort"
-    }
-    input = read(options, command_string)
-    {stdout, stderr, exitcode} = eval(options, symbols, input)
-    if exitcode != -1 do
-      print(options, stdout, stderr)
-
-      if options[:exit] do
-        System.halt(exitcode)
-      else
-        repl(options, "")
-      end
     end
   end
 end
