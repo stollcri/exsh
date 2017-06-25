@@ -68,6 +68,10 @@ defmodule Exsh do
 
     iex> Exsh.options_from_options([], %{loud: 0, quiet: 0})
     %{:noise => 0}
+    iex> Exsh.options_from_options([], %{loud: 1, quiet: 0})
+    %{:noise => 1}
+    iex> Exsh.options_from_options([], %{loud: 0, quiet: 1})
+    %{:noise => -1}
     iex> Exsh.options_from_options([exit: true], %{exit: false, loud: 0, quiet: 0})
     %{:exit => true, :noise => 0}
     iex> Exsh.options_from_options([symbol: "a=a", exit: true], %{exit: false, loud: 0, quiet: 0})
