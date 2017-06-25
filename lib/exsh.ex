@@ -14,7 +14,31 @@ defmodule Exsh do
     |> repl
   end
 
-  defp parse_args(args) do
+  @doc """
+  Parse the passed in arguments to build options and symbol maps
+
+  Returns `{options, symbols, commands}`
+
+  ## Examples
+
+    iex> Exsh.parse_args(["-s", "a=a", "--symbol", "b=b", "--exit", "symbols"])
+    { \
+      %{ \
+        exit: true, \
+        help: false, \
+        noise: 0, \
+        nosymbols: false, \
+        prompt: "\e[32m> \e[0m", \
+        version: "mk II, rev 1, no 1"}, \
+      %{ \
+        "a" => "a", \
+        "b" => "b" \
+      }, \
+      ["symbols"] \
+    }
+
+  """
+  def parse_args(args) do
     options_default = %{
       :version => Application.get_env(:exsh, :version),
       :prompt => IO.ANSI.green <> "> " <> IO.ANSI.reset,
@@ -53,7 +77,7 @@ defmodule Exsh do
     options = Map.merge(options, %{:noise => noise})
 
     # drop options which are no longer needed
-    options = Map.drop(options, [:loud, :symbols, :quiet])
+    options = Map.drop(options, [:loud, :symbol, :quiet])
 
     if options[:help] do
       {Enum.into(options, [:exit, :true]), symbols, ["help"]}
@@ -62,19 +86,19 @@ defmodule Exsh do
     end
   end
 
-  def symbols_from_options(options) do
+  defp symbols_from_options(options) do
     symbols_from_options(options, %{})
   end
-  def symbols_from_options([], symbols) do
+  defp symbols_from_options([], symbols) do
     symbols
   end
-  def symbols_from_options(options, symbols) do
+  defp symbols_from_options(options, symbols) do
     [option | remaining_options] = options
     new_symbol = symbol_from_option(option)
     new_symbols = Map.merge(symbols, new_symbol)
     symbols_from_options(remaining_options, new_symbols)
   end
-  def symbol_from_option(option) do
+  defp symbol_from_option(option) do
     if elem(option, 0) == :symbol do
       [var | tail] = String.split(elem(option, 1), "=")
       [val | _] = tail
@@ -84,7 +108,7 @@ defmodule Exsh do
     end
   end
 
-  def parse_settings({options, symbols, commands}) do
+  defp parse_settings({options, symbols, commands}) do
     hard_coded_symbols = %{
       "alias" => "vars",
       "env" => "vars",
