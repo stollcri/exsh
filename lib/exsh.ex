@@ -110,8 +110,8 @@ defmodule Exsh do
 
   defp parse_settings({options, symbols, commands}) do
     hard_coded_symbols = %{
-      "alias" => "vars",
-      "env" => "vars",
+      "alias" => "symbols",
+      "env" => "symbols",
       "l" => "/bin/ls -CF",
       "la" => "/bin/ls -AG",
       "ll" => "/bin/ls -AGhl",
