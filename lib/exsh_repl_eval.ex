@@ -377,29 +377,36 @@ defmodule Exsh.Repl.Eval do
   end
 
   def execute_os_command(command_list) do
-    # # the line below this is good enough for commands that go through the parser,
-    # # but symbols are substituted late, so that does not work for them
-    # [cmd | args] = command_list
+    # the line below this is good enough for commands that go through the parser,
+    # but symbols are substituted late, so that does not work for them
+    [cmd | args] = command_list
 
-    # # this is required for commands that come from the symbol table
-    # cmd_list = String.split(cmd, " ")
-    # [cmd_list_head | cmd_list_tail] = cmd_list
-    # command = cmd_list_head
+    # this is required for commands that come from the symbol table
+    cmd_list = String.split(cmd, " ")
+    [cmd_list_head | cmd_list_tail] = cmd_list
+    command = cmd_list_head
 
-    # args_list = args ++ cmd_list_tail
-    # arg_joined = args_list |> Enum.join(" ")
-    # arguments = case arg_joined do
-    #   "" -> []
-    #   _ -> [arg_joined]
-    # end
+    args_list = args ++ cmd_list_tail
+    arg_joined = args_list |> Enum.join(" ")
+    arguments = case arg_joined do
+      "" -> []
+      _ -> [arg_joined]
+    end
 
     # {result, _} = System.cmd(command, arguments, [stderr_to_stdout: true])
-    # result
+    {result, _} = System.cmd(command, args_list, [stderr_to_stdout: true])
+    result
 
-    command_list
-    |> Enum.join(" ")
-    |> String.to_char_list
-    |> :os.cmd
+    # command_list
+    # |> Enum.join(" ")
+    # |> String.to_char_list
+    # |> :os.cmd
   end
+
+  #def command_execution(command, arguments) do
+  #  path = System.find_executable(command)
+  #  port = Port.open({:fd, path}, [:binary, args: arguments])
+  #  flush()
+  #end
 
 end
