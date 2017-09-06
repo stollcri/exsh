@@ -25,12 +25,12 @@ defmodule Exsh.Messages do
 
     exsh [options] [commands]
       options:
-        -h, --help          			Show this help
-        -l, --loud								Show more information
-        -q, --quiet         			Show less information
-        -s, --symbol NAME=VALUE		Assign a variable
-        -x, --exit          			Exit after running command
-            --nosymbols     			Do not use symbol table
+        -h, --help               Show this help
+        -l, --loud               Show more information
+        -q, --quiet              Show less information
+        -s, --symbol NAME=VALUE  Assign a variable
+        -x, --exit               Exit after running command
+            --nosymbols          Do not use symbol table
 
       Built-in shell commands:
         help          Print this help
